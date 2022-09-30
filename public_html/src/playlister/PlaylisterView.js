@@ -65,13 +65,13 @@ export default class PlaylisterView {
         // MAKE THE CARD DIV
         let card = document.createElement("div");
         card.setAttribute("id", listId);
-        card.setAttribute("class", "list-card");
-        card.setAttribute("class", "unselected-list-card");
+        card.setAttribute("class", "list-card"); //css file
+        card.setAttribute("class", "unselected-list-card"); //css file
 
         // MAKE THE TEXT SPAN
         let textSpan = document.createElement("span");
-        textSpan.setAttribute("id", "list-card-text-" + newList.id);
-        textSpan.setAttribute("class", "list-card-text");
+        textSpan.setAttribute("id", "list-card-text-" + newList.id); 
+        textSpan.setAttribute("class", "list-card-text"); 
         textSpan.appendChild(document.createTextNode(newList.name));
 
         // MAKE THE DELETE LIST BUTTON FOR THIS CARD
@@ -113,12 +113,45 @@ export default class PlaylisterView {
             itemDiv.classList.add("unselected-list-card");
             itemDiv.id = "playlist-card-" + (i + 1);
 
+            let orderList = document.createElement("span");
+            let number = document.createTextNode(i+1 + ".");
+            orderList.appendChild(number);
             // PUT THE CONTENT INTO THE CARD
             let itemText = document.createTextNode(song.title + " by " + song.artist);
-            itemDiv.appendChild(itemText);
+
+            let att = document.createElement('a');
+            att.setAttribute("target","_blank");
+            att.appendChild(itemText);
+            att.href = "https://www.youtube.com/watch?v=" + song.youTubeId;
+
+            let deleteSongButton = document.createElement("input");
+            deleteSongButton.setAttribute("type", "button");
+            deleteSongButton.setAttribute("id", "delete-song-" + (i+1));
+            deleteSongButton.setAttribute("class", "list-card-button");
+            deleteSongButton.setAttribute("value", "X");
+
+            orderList.appendChild(att);
+
+            itemDiv.appendChild(orderList);
+            itemDiv.appendChild(deleteSongButton);
 
             // AND PUT THE CARD INTO THE UI
             itemsDiv.appendChild(itemDiv);
+
+            let text1Span = document.createElement("span");
+            text1Span.setAttribute("id", "list-card-title-" + (i+1)); 
+            text1Span.setAttribute("class", "list-card-text"); 
+            text1Span.appendChild(document.createTextNode(song.title));
+
+            let text2Span = document.createElement("span");
+            text2Span.setAttribute("id", "list-card-artist-" + (i+1)); 
+            text2Span.setAttribute("class", "list-card-text"); 
+            text2Span.appendChild(document.createTextNode(song.artist));
+
+            let text3Span = document.createElement("span");
+            text3Span.setAttribute("id", "list-card-youTubeId-" + (i+1)); 
+            text3Span.setAttribute("class", "list-card-text"); 
+            text3Span.appendChild(document.createTextNode(song.youTubeId));
         }
         // NOW THAT THE CONTROLS EXIST WE CAN REGISTER EVENT
         // HANDLERS FOR THEM
@@ -194,14 +227,53 @@ export default class PlaylisterView {
         buttons cannot be used they are disabled.
     */
     updateToolbarButtons(model) {
-        let tps = model.tps;
-        if (model.confirmDialogOpen) {
             this.disableButton("add-list-button");
+            this.disableButton("add-song-button");
             this.disableButton("undo-button");
             this.disableButton("redo-button");
             this.disableButton("close-button");
-        }
     }
+
+    updateClostListButtons(model) {
+            this.enableButton("add-list-button");
+            this.disableButton("add-song-button");
+            this.disableButton("undo-button");
+            this.disableButton("redo-button");
+            this.disableButton("close-button");
+    }
+
+    updateToolbarButtons2(model) {
+            this.disableButton("add-list-button");
+            this.enableButton("add-song-button");
+            this.enableButton("undo-button");
+            this.enableButton("redo-button");
+            this.enableButton("close-button");
+    }
+
+    updateToolbarButtons3(model) {
+            this.disableButton("add-list-button");
+            this.enableButton("add-song-button");
+            this.disableButton("undo-button");
+            this.enableButton("redo-button");
+            this.enableButton("close-button");
+
+    }
+
+    updateToolbarButtons4(model) {
+            this.disableButton("add-list-button");
+            this.enableButton("add-song-button");
+            this.enableButton("undo-button");
+            this.disableButton("redo-button");
+            this.enableButton("close-button");
+    }
+
+    updateToolbarButtonsUndoRedo(model) {
+        this.disableButton("add-list-button");
+        this.enableButton("add-song-button");
+        this.disableButton("undo-button");
+        this.disableButton("redo-button");
+        this.enableButton("close-button");
+}
 
     /*
         updateStatusBar

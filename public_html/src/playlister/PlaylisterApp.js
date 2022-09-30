@@ -26,6 +26,7 @@ export class PlaylisterApp {
 
         // AND THE CONTROLLER NEEDS TO MODEL TO UPDATE WHEN INTERACTIONS HAPPEN
         this.controller.setModel(this.model);
+        //this.model.modalButtons();
     }
 
     /**
@@ -41,6 +42,7 @@ export class PlaylisterApp {
         let success = this.model.loadLists();
         if (!success) {
             this.loadListsFromJSON("./data/default_lists.json");
+            //this.model.modalCancelButtons();
         }
     }
 
@@ -71,6 +73,7 @@ export class PlaylisterApp {
                     }
                     modelToUpdate.addNewList(listData.name, songs);
                 }
+                //this.model.modalDeleteButtons();
             }
         };
         xmlhttp.open("GET", jsonFilePath, true);
@@ -84,4 +87,5 @@ window.onload = function() {
     // MAKE THE APP AND LAUNCH IT
     let app = new PlaylisterApp();
     app.launch();
+    app.model.modalButtons();
 }

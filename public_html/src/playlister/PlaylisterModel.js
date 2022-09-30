@@ -1,5 +1,8 @@
 import jsTPS from "../common/jsTPS.js";
 import Playlist from "./Playlist.js";
+import AddSong_Transaction from "./transactions/AddSong_Transaction.js";
+import DeleteSong_Transaction from "./transactions/DeleteSong_Transaction.js";
+import EditSong_Transaction from "./transactions/EditSong_Transaction.js";
 import MoveSong_Transaction from "./transactions/MoveSong_Transaction.js";
 
 /**
@@ -49,6 +52,15 @@ export default class PlaylisterModel {
     refreshToolbar() {
         this.view.updateToolbarButtons(this);
     }
+
+    saveIndex(index){
+        this.currenIndex = index;
+    }
+
+    getEditIndex(){
+        return this.currenIndex;
+    }
+
     
     // FIRST WE HAVE THE ACCESSOR (get) AND MUTATOR (set) METHODS
     // THAT GET AND SET BASIC VALUES NEEDED FOR COORDINATING INTERACTIONS
@@ -68,6 +80,19 @@ export default class PlaylisterModel {
         return -1;
     }
 
+    getSongIndex(id) {
+        for (let i = 0; i < this.playlists.length; i++) {
+            let list = this.playlists[i];
+            for(let j = 0; j < list.songs.length; j++){
+                let song = list.songs[j];
+                if (song.youTubeId === id) {
+                    return j;
+                }
+            }
+        }
+        return -1;
+    }
+
     getPlaylistSize() {
         return this.currentList.songs.length;
     }
@@ -76,12 +101,21 @@ export default class PlaylisterModel {
         return this.currentList.songs[index];
     }
 
+
     getDeleteListId() {
         return this.deleteListId;
     }
 
     setDeleteListId(initId) {
         this.deleteListId = initId;
+    }
+
+    setDeleteSongId(initId) {
+        this.deleteSongId = initId;
+    }
+
+    getDeleteSongId() {
+        return this.deleteSongId;
     }
 
     toggleConfirmDialogOpen() {
@@ -104,6 +138,38 @@ export default class PlaylisterModel {
         return newList;
     }
 
+    addNewSong(songName,artistName,songId){
+        if (this.hasCurrentList() == null){
+            return;
+        }
+        const newSong = { title: songName,artist: artistName, youTubeId: songId }
+
+        this.currentList.songs.push(newSong);    
+        this.view.refreshPlaylist(this.currentList);
+        this.modalRedoUndoButtons();
+        this.saveLists();
+    }
+
+    insertSong(stack1,stack2){
+        let arr = [];
+        let index = stack2.pop();
+        let data = stack1.pop();
+        let j = 0;
+        for (let i = 0 ; i <= this.currentList.songs.length;i++){
+            if (i == index){
+                arr[i] = data;
+            } else {
+            arr[i] = this.currentList.songs[j];
+            j++;
+            }
+        }
+        this.currentList.songs = arr;    
+        this.view.refreshPlaylist(this.currentList);
+        this.saveLists();
+    }
+
+
+
     sortLists() {
         this.playlists.sort((listA, listB) => {
             if (listA.getName().toUpperCase() < listB.getName().toUpperCase()) {
@@ -123,12 +189,17 @@ export default class PlaylisterModel {
         return this.currentList !== null;
     }
 
+    hasSong(){
+        return this.currentList.songs !== null;
+    }
+
     unselectAll() {
         for (let i = 0; i < this.playlists.length; i++) {
             let list = this.playlists[i];
             this.view.unhighlightList(list.id); // Was : this.view.unhighlightList(i);
         }
     }
+
 
     loadList(id) {
         // If user attempts to reload the currentList, then do nothing.
@@ -147,13 +218,14 @@ export default class PlaylisterModel {
                 this.currentList = list;
                 this.view.refreshPlaylist(this.currentList);
                 this.view.highlightList(id); // Was : this.view.highlightList(i);
+                this.modalButtons();
+                this.view.updateToolbarButtonsUndoRedo();
                 found = true;
             }
             i++;
         }
         this.tps.clearAllTransactions();
         this.view.updateStatusBar(this);
-        this.view.updateToolbarButtons(this);
     }
 
     loadLists() {
@@ -184,8 +256,9 @@ export default class PlaylisterModel {
         localStorage.setItem("recent_work", playlistsString);
     }
 
-    restoreList() {
-        this.view.update(this.currentList);
+    restoreList(){
+        this.view.refreshPlaylist(this.currentList);
+        this.saveLists();
     }
 
     unselectCurrentList() {
@@ -194,11 +267,11 @@ export default class PlaylisterModel {
             this.view.updateStatusBar(this);
             this.view.clearWorkspace();
             this.tps.clearAllTransactions();
-            this.view.updateToolbarButtons(this);
+            this.modalButtons();
         }
     }
 
-    renameCurrentList(initName, id) {
+    renameCurrentList(initName,id) {
         if (this.hasCurrentList()) {
             let targetList = this.playlists[this.getListIndex(id)];
 
@@ -212,6 +285,49 @@ export default class PlaylisterModel {
             this.view.highlightList(id);
             this.saveLists();
             this.view.updateStatusBar(this);
+        }
+    }
+
+    renameCurrentSong(songTitle,songArtist,songId,index) {
+        if (this.hasCurrentList()) {
+            let targetSong = this.currentList.songs[index];
+
+            if (songTitle === "") {
+                targetSong.title = "Untitled";
+            } else {
+                targetSong.title = songTitle;
+            }
+
+            if (songArtist === "") {
+                targetSong.artist = "Unkonwn";
+            } else {
+                targetSong.artist = songArtist;
+            }
+
+            if (songId === "") {
+                targetSong.youTubeId = "dQw4w9WgXcQ";
+            } else {
+                targetSong.youTubeId = songId;
+            }
+
+            this.view.refreshPlaylist(this.currentList);
+            this.view.refreshLists(this.playlists);
+            this.saveLists();
+        }
+    }
+
+
+    changeBack(songTitle,songArtist,songId,index) {
+        if (this.hasCurrentList()) {
+            let targetSong = this.currentList.songs[index];
+
+            targetSong.title = songTitle;
+            targetSong.artist = songArtist;
+            targetSong.youTubeId = songId;
+
+            this.view.refreshPlaylist(this.currentList);
+            this.view.refreshLists(this.playlists);
+            this.saveLists();
         }
     }
 
@@ -232,6 +348,22 @@ export default class PlaylisterModel {
         this.saveLists();
     }
 
+    deleteSong(id) {
+        let arr = [];
+        let j = 0;
+        for(let i = 0 ; i < this.currentList.songs.length; i++){
+            if(id !== i){
+                arr[j] = this.currentList.songs[i];
+                j++;
+            } 
+        }
+        this.currentList.songs = arr;
+        this.view.refreshPlaylist(this.currentList);
+        //this.modalCancelButtons();
+        this.modalRedoUndoButtons();
+        this.saveLists();
+    }
+
     // NEXT WE HAVE THE FUNCTIONS THAT ACTUALLY UPDATE THE LOADED LIST
 
     moveSong(fromIndex, toIndex) {
@@ -241,6 +373,7 @@ export default class PlaylisterModel {
             this.currentList.songs = tempArray;
             this.view.refreshPlaylist(this.currentList);
         }
+        //this.modalRedoUndoButtons();
         this.saveLists();
     }
 
@@ -266,6 +399,85 @@ export default class PlaylisterModel {
     addMoveSongTransaction(fromIndex, onIndex) {
         let transaction = new MoveSong_Transaction(this, fromIndex, onIndex);
         this.tps.addTransaction(transaction);
+        this.modalRedoUndoButtons();
+        //this.view.updateToolbarButtons(this);
+    }
+
+    addSongTransaction(initSongTitle, initSongArtist, initSongYouTubeId) {
+        let transaction = new AddSong_Transaction(this, initSongTitle, initSongArtist, initSongYouTubeId);
+        this.tps.addTransaction(transaction);
+        //this.view.updateToolbarButtons(this);
+    }
+
+    deleteSongTransaction(id) {
+        let stack1 = [];
+        let stack2 = [];
+        let transaction = new DeleteSong_Transaction(this, stack1,stack2,id);
+        this.tps.addTransaction(transaction);
+    }
+
+    editSongTransaction(songTitle, songArtist, songId) {
+        let preTitle = this.getSong(this.getEditIndex()).title;
+        let preArtist = this.getSong(this.getEditIndex()).artist;
+        let preId = this.getSong(this.getEditIndex()).youTubeId;
+        let index = this.getEditIndex();
+
+        let transaction = new EditSong_Transaction(this,preTitle,preArtist,preId,songTitle,songArtist,songId,index);
+        this.tps.addTransaction(transaction);
+    }
+
+    restore(stack){
+        this.playlists = stack.pop();
+        this.view.refreshLists(this.playlists);
+    }
+
+    modalButtons(){
+        if (this.currentList == null){
+            this.view.updateClostListButtons(this);
+        } else {
+            this.view.updateToolbarButtons2(this);
+        }
+    }
+
+    modalCancelButtons(){
+        this.view.updateToolbarButtons2(this);
+    }
+
+    modalCancelListButtons(){
+        this.view.updateToolbarButtons3(this);
+    }
+
+    modalDeleteButtons(){
+        this.view.updateClostListButtons(this);
+    }
+
+    modalUndoButtons(){
+        if (this.tps.mostRecentTransaction == -1){
+            this.view.updateToolbarButtons3(this);
+        } else {
+            this.view.updateToolbarButtons2(this);
+        }
+    }
+
+    modalRedoButtons(){
+        if (this.tps.mostRecentTransaction == this.tps.numTransactions-1){
+            this.view.updateToolbarButtons4(this);
+        } else {
+            this.view.updateToolbarButtons2(this);
+        }
+    }
+
+    modalRedoUndoButtons(){
+        if (this.tps.numTransactions == 0){
+            this.view.updateToolbarButtonsUndoRedo(this);
+        } else {
+            this.view.updateToolbarButtons4(this);
+        } 
+    }
+
+    modalbuttons(){
         this.view.updateToolbarButtons(this);
     }
+
+
 }
